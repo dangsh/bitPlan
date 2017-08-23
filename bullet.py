@@ -18,6 +18,6 @@ class Bullet1(pygame.sprite.Sprite):
         if self.rect.top <0:
             self.active = False;
 
-    def reset(self):
+    def reset(self,position):
         self.rect.left, self.rect.top = position;
         self.active =True;

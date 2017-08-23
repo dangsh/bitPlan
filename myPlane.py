@@ -10,7 +10,7 @@ class MyPlane(pygame.sprite.Sprite):
         self.width , self.height = bg_size[0] , bg_size[1];
 
         self.rect.left , self.rect.top = (self.width - self.rect.width) / 2 , self.height - self.rect.height - 60;
-        self.speed = 10;
+        self.speed = 5;
 
         self.active=True;
         self.mask = pygame.mask.from_surface(self.image1);

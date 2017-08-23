@@ -4,6 +4,15 @@ import sys
 from pygame.locals import *
 import myPlane
 import enemy
+import bullet
+
+# 定义颜色
+BLACK = (0,0,0);
+RED = (255,0,0);
+GREEN = (0,255,0);
+BLUE = (0,0,255);
+WHITE = (255,255,255);
+
 
 
 pygame.init();
@@ -14,7 +23,7 @@ pygame.init();
 # pygame.mixer.music.set_volume(1);
 
 
-# bullet = pygame.mixer.Sound("mp3/bullet.mp3");
+# bullet = pygame.mixer.Sound("mp3/bullet.mp3"); 
 # bullet.set_volume(.6);
 
 
@@ -42,6 +51,16 @@ def add_big_enemies(group1,group2,num):
         group2.add(e3);
 
 
+
+#增加所有飞机的速度
+def increseEnemySpeed(enemyList):
+    for each in enemyList:
+        each.speed += 1;
+
+    
+
+
+
 def main():
     clock = pygame.time.Clock();
     # pygame.mixer.music.play(-1);
@@ -52,12 +71,30 @@ def main():
     #用于延迟
     delay = 100;
 
+        
+    #分数
+    score = 0;
+    score_font = pygame.font.Font("AaxiaoNangua.ttf",36);
+
+
+    #设置游戏难度级别
+    level = 1;
 
     running = True;
 
     # 创建英雄飞机
     me = myPlane.MyPlane(bg_size);
     enemies = pygame.sprite.Group();
+
+    # 生成普通子弹
+    bullet1 = [];
+    bullet1_index = 0;
+    bullet1_num = 4;
+
+    for i in range(bullet1_num):
+        bullet1.append(bullet.Bullet1(me.rect.midtop))
+
+
     #生成敌方小型飞机
     small_enemies = pygame.sprite.Group();
     add_small_enemies(enemies,small_enemies,15);
@@ -82,6 +119,27 @@ def main():
     
     # 游戏运行
     while running:
+
+        # 根据用户的得分情况，改变游戏级别
+        if level == 1 and score > 100:
+            level = 2;
+            add_small_enemies(small_enemies,enemies,3);
+            add_mid_enemies(mid_enemies,enemies,2);
+            add_big_enemies(big_enemies,enemies,1);
+            increseEnemySpeed(enemies);
+        elif level == 2 and score >200:
+            level = 3;
+            add_small_enemies(small_enemies,enemies,3);
+            add_mid_enemies(mid_enemies,enemies,2);
+            add_big_enemies(big_enemies,enemies,1);
+            increseEnemySpeed(enemies);
+        elif level == 3 and score >500:
+            level = 4;
+            add_small_enemies(small_enemies,enemies,3);
+            add_mid_enemies(mid_enemies,enemies,2);
+            add_big_enemies(big_enemies,enemies,1);
+            increseEnemySpeed(enemies);
+
         # 事件队列
         for event in pygame.event.get():
             # 退出事件
@@ -103,14 +161,59 @@ def main():
         # 渲染游戏对象
         screen.blit(background , (0 , 0));
 
+
+        # 开始发射子弹
+        if not delay%10:
+            bullet1[bullet1_index].reset(me.rect.midtop);
+            bullet1_index = (bullet1_index + 1) % bullet1_num;
+
+        # 检测子弹是否击中敌人飞机
+        for b in bullet1:
+            if b.active:
+                b.move();
+                screen.blit(b.image,b.rect);
+                enemy_hit = pygame.sprite.spritecollide(b , enemies , False ,pygame.sprite.collide_mask);
+                if enemy_hit:
+                    b.active = False ;
+                    for e in enemy_hit:
+                        if e in mid_enemies or e in big_enemies:
+                            e.hp -= 1;
+                            e.hit = True;
+
+                            if e.hp == 0:
+                                e.active = False;
+
+                        else:
+                            e.active = False;
+
+                        
+
+
         # 绘制大型飞机
         for each in big_enemies:
             if each.active:
                 each.move();
-                if switchImage:
-                    screen.blit(each.image1,each.rect);
+                if each.hit:
+                    screen.blit(each.image_hit , each.rect);
+                    each.hit =False;
                 else:
-                    screen.blit(each.image2,each.rect);
+                    if switchImage:
+                        screen.blit(each.image1,each.rect);
+                    else:
+                        screen.blit(each.image2,each.rect);
+
+                # 绘制血槽
+                pygame.draw.line(screen , BLACK , (each.rect.left,each.rect.top - 10), (each.rect.right,each.rect.top - 10), 2);
+                # 当生命大于20%的时候显示绿色，否则红色
+                enemy_remain = each.hp / enemy.BigEnemy.hp;
+                if enemy_remain >0.2:
+                    yanse = GREEN;
+                else:
+                    yanse = RED;
+
+
+                pygame.draw.line(screen , yanse , (each.rect.left,each.rect.top - 10) , (each.rect.left + each.rect.width * enemy_remain ,each.rect.top - 10) , 2);
+
             else:
                 #毁灭
                     if not (delay % 4):
@@ -126,7 +229,24 @@ def main():
             
             if each.active:
                 each.move();
-                screen.blit(each.image,each.rect);
+                if each.hit:
+                    screen.blit(each.image_hit , each.rect);
+                    each.hit =False;
+                else:
+                    screen.blit(each.image,each.rect);
+
+                # 绘制血槽
+                pygame.draw.line(screen , BLACK , (each.rect.left,each.rect.top - 10), (each.rect.right,each.rect.top - 10), 2);
+                 # 当生命大于20%的时候显示绿色，否则红色
+                enemy_remain = each.hp / enemy.MidEnemy.hp;
+                if enemy_remain >0.2:
+                    yanse = GREEN;
+                else:
+                    yanse = RED;
+
+
+                pygame.draw.line(screen , yanse , (each.rect.left,each.rect.top - 10) , (each.rect.left + each.rect.width * enemy_remain ,each.rect.top - 10) , 2);
+
             else:
                     #毁灭
                     if not (delay % 4):
@@ -145,6 +265,7 @@ def main():
                         screen.blit(each.destroy_images[e1_destroy_index],each.rect);
                         e1_destroy_index=(e1_destroy_index + 1) % 4;
                         if e1_destroy_index == 0:
+                            score += 10;
                             each.reset();   
 
 
@@ -169,7 +290,18 @@ def main():
                         screen.blit(me.destroy_images[me_destroy_index],each.rect);
                         me_destroy_index=(me_destroy_index + 1) % 4;
                         if me_destroy_index == 0:
-                            me.reset();   
+                            # me.reset();
+
+                            #退出游戏
+                            running = False;
+
+
+
+        #显示分数
+        score_text = score_font.render("分数： %s" % str(score),True,RED);
+        screen.blit(score_text,(0,0));
+
+
         #切换图片
 
         if not (delay%5):
