@@ -5,6 +5,8 @@ from pygame.locals import *
 import myPlane
 import enemy
 import bullet
+import supply
+from random import *
 
 # 定义颜色
 BLACK = (0,0,0);
@@ -65,6 +67,19 @@ def main():
     clock = pygame.time.Clock();
     # pygame.mixer.music.play(-1);
 
+
+    #每10秒发放一个补给包
+    bullet_supply = supply.Bullet_Stupply(bg_size);
+    bomb_supple = supply.Bomb_Stupply(bg_size);
+    supply_time = USEREVENT;
+    pygame.time.set_timer(supply_time , 10*1000);
+
+
+    #超级子弹的定时器
+    double_bullet_time = USEREVENT + 1 ;
+    #标志你的飞机是否在使用超级子弹
+    is_double_bullet = False;
+
     #用于切换图片
     switchImage = True;
 
@@ -75,6 +90,13 @@ def main():
     #分数
     score = 0;
     score_font = pygame.font.Font("AaxiaoNangua.ttf",36);
+
+    #全屏炸弹
+    bomb_image = pygame.image.load("gameArts/bomb.png").convert_alpha();
+    bomb_rect = bomb_image.get_rect();
+    bomb_font = pygame.font.Font("AaxiaoNangua.ttf",36);
+    bomb_num = 3;
+
 
 
     #设置游戏难度级别
@@ -93,6 +115,15 @@ def main():
 
     for i in range(bullet1_num):
         bullet1.append(bullet.Bullet1(me.rect.midtop))
+
+    # 生成超级子弹
+    bullet2 = [];
+    bullet2_index = 0;
+    bullet2_num = 8;
+
+    for i in range(bullet2_num):
+        bullet2.append(bullet.Bullet2((me.rect.left+8 , me.rect.centery)));
+
 
 
     #生成敌方小型飞机
@@ -147,6 +178,27 @@ def main():
                 pygame.quit();
                 sys.exit();
 
+            if event.type == double_bullet_time:
+                is_double_bullet = False;
+                pygame.time.set_timer(double_bullet_time, 0);
+
+
+            if event.type == supply_time:
+                if randint(0 , 11)%2:
+                    bomb_supple.reset();
+                else:
+                    bullet_supply.reset();
+
+            if event.type == KEYDOWN:
+                if event.key == K_SPACE:
+                    if bomb_num:
+                        bomb_num -= 1;
+                        for each in enemies:
+                            if each.rect.bottom> 0:
+                                each.active = False;
+
+
+
         # 检测用户的键盘操作
         key_pressed = pygame.key.get_pressed();
         if key_pressed[K_w] or key_pressed[pygame.K_UP]:
@@ -162,13 +214,40 @@ def main():
         screen.blit(background , (0 , 0));
 
 
+        # 绘制全屏炸弹 并检测有没有被me获得
+        if bomb_supple.active:
+            bomb_supple.move();
+            screen.blit(bomb_supple.image , bomb_supple.rect);
+            if pygame.sprite.collide_mask(bomb_supple , me):
+                bomb_num = 3;
+                bomb_supple.active = False;
+
+
+        #绘制超级子弹
+
+        if bullet_supply.active:
+            bullet_supply.move();
+            screen.blit(bullet_supply.image , bullet_supply.rect);
+            if pygame.sprite.collide_mask(bullet_supply , me):
+                bullet_supply.active = False;
+                is_double_bullet = True;
+                pygame.time.set_timer(double_bullet_time , 10 *1000);
+
+
+
         # 开始发射子弹
         if not delay%10:
-            bullet1[bullet1_index].reset(me.rect.midtop);
-            bullet1_index = (bullet1_index + 1) % bullet1_num;
+            if is_double_bullet:
+                bullets = bullet2;
+                bullets[bullet2_index].reset((me.rect.left+8,me.rect.centery));
+                bullet2_index = (bullet2_index + 1) % bullet2_num;
+            else:
+                bullets = bullet1;
+                bullet1[bullet1_index].reset(me.rect.midtop);
+                bullet1_index = (bullet1_index + 1) % bullet1_num;
 
         # 检测子弹是否击中敌人飞机
-        for b in bullet1:
+        for b in bullets:
             if b.active:
                 b.move();
                 screen.blit(b.image,b.rect);
@@ -300,6 +379,13 @@ def main():
         #显示分数
         score_text = score_font.render("分数： %s" % str(score),True,RED);
         screen.blit(score_text,(0,0));
+
+        #绘制全屏炸弹
+        bomb_text = bomb_font.render("x %d"% bomb_num , True , WHITE);
+        text_rect = bomb_text.get_rect();
+        screen.blit(bomb_image ,(0,height - bomb_rect.height));
+        screen.blit(bomb_text , (5 +bomb_rect.width,height - text_rect.height));
+
 
 
         #切换图片
